@@ -1,0 +1,25 @@
+setwd("/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs")
+
+#install.packages("Seurat")
+library(Seurat)
+#install.packages("ggplot2")
+library(ggplot2)
+library(sctransform)
+library(tidyr)
+library(dplyr)
+#install.packages("hdf5r")
+#install.packages("remotes")
+library(hdf5r)
+library(remotes)
+remotes::install_github("10xGenomics/loupeR")
+loupeR::setup()
+library(loupeR)
+library(patchwork)
+
+
+import R object
+#load("2w3w1y-WT-merged_seurat.Robj")
+load("2w3w1yWT-stroma-subset_seurat.Robj")
+View(subset_seurat)
+head(subset_seurat)
+tail(subset_seurat)
