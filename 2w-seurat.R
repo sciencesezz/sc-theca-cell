@@ -30,13 +30,12 @@ tail(merged_seurat)
 metadata <- merged_seurat@meta.data  
 
 #levels <- c("2week_g3", "1year_g2", "1year_g3")
-levels <- c("2week_g2", "3week_g1", "1year_g1")
+levels <- c("2week_g1", "2week_g2", "2week_g3")
 
 #levels_age <- c("2week", "1year", "1year_adeno")
-levels_age <- c("2week", "3week", "1year")
 
 metadata$sample <- factor(metadata$sample, levels = levels)
-metadata$Age <- factor(metadata$Age, levels = levels_age)
+
 
 #check number of cells per sample
 
@@ -100,7 +99,7 @@ metadata %>%
 
 # Visualize the number UMIs/transcripts per cell
 metadata %>% 
-  ggplot(aes(color=Age, x=nUMI, fill= Age)) + 
+  ggplot(aes(color=sample, x=nUMI, fill= sample)) + 
   geom_density(alpha = 0.2) + 
   scale_x_log10() + 
   theme_classic() +
@@ -123,7 +122,7 @@ metadata %>%
 
 # Visualize the distribution of genes detected per cell via histogram
 metadata %>% 
-  ggplot(aes(color=Age, x=nGene, fill= Age)) + 
+  ggplot(aes(color= sample, x=nGene, fill= sample)) + 
   geom_density(alpha = 0.2) + 
   theme_classic() +
   theme(
@@ -143,7 +142,7 @@ metadata %>%
 
 # Visualize the overall complexity of the gene expression by visualizing the genes detected per UMI (novelty score)
 metadata %>%
-  ggplot(aes(x=log10GenesPerUMI, color = Age, fill= Age)) +
+  ggplot(aes(x = log10GenesPerUMI, color = sample, fill = sample)) +
   geom_density(alpha = 0.2) +
   theme_classic() +
   theme(
@@ -162,7 +161,7 @@ metadata %>%
 
 # Visualize the distribution of mitochondrial gene expression detected per cell
 metadata %>% 
-  ggplot(aes(color=Age, x=percent.mt, fill=Age)) + 
+  ggplot(aes(color = sample, x = percent.mt, fill = sample)) + 
   geom_density(alpha = 0.2) + 
   scale_x_log10() + 
   theme_classic() +
@@ -204,7 +203,7 @@ metadata %>%
   ) +
   geom_vline(xintercept = 500) +
   geom_hline(yintercept = 250) +
-  facet_wrap(~Age) + 
+  facet_wrap(~sample) + 
   ggtitle("Correlation between genes\ndetected and # of UMIs per cell")
 ##Step 3 - normalisation
 merged_seurat <- NormalizeData(merged_seurat, 
@@ -247,11 +246,11 @@ merged_seurat <- FindNeighbors(merged_seurat, dims = 1:16)
 merged_seurat <- FindClusters(merged_seurat, resolution = c(0.1, 0.2, 0.3, 0.5, 0.6, 0.7))
 View(merged_seurat@meta.data)
 
-#plotting the resolutions - have a look at these...I chose 0.1
-DimPlot(merged_seurat, group.by = "RNA_snn_res.0.1", label = TRUE)
+#plotting the resolutions - have a look at these...I chose 0.2
+DimPlot(merged_seurat, group.by = "RNA_snn_res.0.2", label = TRUE)
 
 #setting identity of clusters
-Idents(merged_seurat) <- "RNA_snn_res.0.1"
+Idents(merged_seurat) <- "RNA_snn_res.0.2"
 
 #nonlinear dimenstionality reduction
 merged_seurat <- RunUMAP(merged_seurat, dims = 1:16)
@@ -261,12 +260,12 @@ merged_seurat <- RunUMAP(merged_seurat, dims = 1:16)
 create_loupe_from_seurat(
   merged_seurat,
   output_dir = "/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs",
-  output_name = "2w3w1y-final-mito10-sept", 
+  output_name = "2w-final-mito10-sept", 
   metadata_cols = c("RNA_snn_res.0.1", "RNA_snn_res.0.2", 
                     "RNA_snn_res.0.3", "Age", "sample"))
 
 DimPlot(merged_seurat, reduction = "umap", group.by = "Age")
-DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.1")
+DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.2")
 #DimPlot(filtered_seurat, reduction = "tsne")
 
 #plot with labels - apparently you can tell if you have batch effects from this
@@ -274,7 +273,7 @@ DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.1")
 #correct for batch effects. 
 #now I understand this - if there are any cluster(s) that are distinct for the sample type that means
 #that you probably have batch effects. It looks like we dont, so can continue without batch correction.
-p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.1", label = TRUE, label.size = 8) + 
+p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.2", label = TRUE, label.size = 8) + 
   ggtitle("UMAP of Clusters") + 
   theme(
     plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
@@ -285,15 +284,15 @@ p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.1", l
 print(p1)
 
 #Check for Batch effects graphs
-levels_age <- c("2week", "3week", "1year")
-merged_seurat@meta.data$Age <- factor(merged_seurat@meta.data$Age, levels = levels_age)
+#levels_age <- c("2week", "3week", "1year")
+#merged_seurat@meta.data$Age <- factor(merged_seurat@meta.data$Age, levels = levels_age)
 
 # Now plot
-VlnPlot(merged_seurat, features = c("nUMI", "nGene", "percent.mt"), group.by = "Age")
+VlnPlot(merged_seurat, features = c("nUMI", "nGene", "percent.mt"), group.by = "sample")
 
 
-p2 <- DimPlot(merged_seurat, reduction = "umap", group.by = "Age") + 
-  ggtitle("Clusters by Age") + 
+p2 <- DimPlot(merged_seurat, reduction = "umap", group.by = "sample") + 
+  ggtitle("Clusters by Sample") + 
   theme(
     plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
     axis.title = element_text(size = 18, face = "bold"),
@@ -307,24 +306,26 @@ print(p2)
 #genes used are found below in heatmap section
 library("ggplot2")
 # First, make a copy of the cluster column
-merged_seurat$cluster_id <- merged_seurat$RNA_snn_res.0.1
+merged_seurat$cluster_id <- merged_seurat$RNA_snn_res.0.2
 
 # Now create the cell_type column by direct assignment
 merged_seurat$cell_type <- NA  # Initialize with NA
 
 # Assign cell types for each cluster
 merged_seurat$cell_type[merged_seurat$cluster_id == 0] <- "Fibroblastic Stroma 1"
-merged_seurat$cell_type[merged_seurat$cluster_id == 1] <- "GCs"
-merged_seurat$cell_type[merged_seurat$cluster_id == 2] <- "Fibroblastic Stroma 2"
-merged_seurat$cell_type[merged_seurat$cluster_id == 3] <- "Endothelial Cells 1"
+merged_seurat$cell_type[merged_seurat$cluster_id == 1] <- "Fibroblastic Stroma 2"
+merged_seurat$cell_type[merged_seurat$cluster_id == 2] <- "Fibroblastic Stroma 3"
+merged_seurat$cell_type[merged_seurat$cluster_id == 3] <- "GCs"
 merged_seurat$cell_type[merged_seurat$cluster_id == 4] <- "Theca Cells 1"
-merged_seurat$cell_type[merged_seurat$cluster_id == 5] <- "B Lymphocytes"
-merged_seurat$cell_type[merged_seurat$cluster_id == 6] <- "Theca Cells 2"
-merged_seurat$cell_type[merged_seurat$cluster_id == 7] <- "Epithelial Cells"
+merged_seurat$cell_type[merged_seurat$cluster_id == 5] <- "Epithelial"
+merged_seurat$cell_type[merged_seurat$cluster_id == 6] <- "Endothelial 1"
+merged_seurat$cell_type[merged_seurat$cluster_id == 7] <- "Fibroblastic Stroma 4"
 merged_seurat$cell_type[merged_seurat$cluster_id == 8] <- "T Lymphocytes"
-merged_seurat$cell_type[merged_seurat$cluster_id == 9] <- "Pericytes"
+merged_seurat$cell_type[merged_seurat$cluster_id == 9] <- "Fibroblastic Stroma 5"
 merged_seurat$cell_type[merged_seurat$cluster_id == 10] <- "Phagocytes"
-merged_seurat$cell_type[merged_seurat$cluster_id == 11] <- "Endothelial Cells 2"
+merged_seurat$cell_type[merged_seurat$cluster_id == 11] <- "Endothelial 2"
+merged_seurat$cell_type[merged_seurat$cluster_id == 12] <- "B Lymphocytes"
+merged_seurat$cell_type[merged_seurat$cluster_id == 13] <- "Pericytes"
 
 p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "cell_type", label = FALSE) + 
   ggtitle("Cell Type") + 
@@ -348,8 +349,8 @@ p2 <- DimPlot(merged_seurat, reduction = "umap", group.by = "cell_type", label =
 print(p2)
 ggsave("cell-type-umap-small-xleg.png", plot = p2, width = 7, height = 7, dpi = 800)
 
-p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "Age", label = FALSE) + 
-  ggtitle("Age") + 
+p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "sample", label = FALSE) + 
+  ggtitle("Sample") + 
   theme(
     plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
     axis.title = element_text(size = 18, face = "bold"),
@@ -357,10 +358,10 @@ p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "Age", label = FALSE
     legend.title = element_text(size = 18, face = "bold"),
     legend.text = element_text(size = 18))
 print(p1)
-ggsave("age-umap-small.png", plot = p1, width = 7, height = 5, dpi = 800)
+ggsave("sample-umap-small.png", plot = p1, width = 7, height = 5, dpi = 800)
 
-p2 <- DimPlot(merged_seurat, reduction = "umap", group.by = "Age", label = FALSE) + 
-  ggtitle("Age") + 
+p2 <- DimPlot(merged_seurat, reduction = "umap", group.by = "sample", label = FALSE) + 
+  ggtitle("Sample") + 
   theme(
     plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
     axis.title = element_text(size = 18, face = "bold"),
@@ -372,14 +373,14 @@ ggsave("age-umap-small-xleg.png", plot = p2, width = 7, height = 7, dpi = 800)
 
 #make an Robject to the input into other parts of the pipeline
 # Assuming your Seurat object is called "seurat_obj"
-save(merged_seurat, file = "2w3w1y-WT-merged_seurat.RData")
+save(merged_seurat, file = "2w-WT-merged_seurat.RData")
 
 # Make a table of number of cells in each cell type by age
-table(merged_seurat$cell_type, merged_seurat$Age)
-
+#table(merged_seurat$cell_type, merged_seurat$Age)
+table(merged_seurat$cell_type)
 # First, create the count table with both cell type and age
-cell_type_age_counts <- as.data.frame(table(merged_seurat$cell_type, merged_seurat$Age))
-colnames(cell_type_age_counts) <- c("CellType", "Age", "Count")
+cell_type_age_counts <- as.data.frame(table(merged_seurat$cell_type))
+colnames(cell_type_age_counts) <- c("CellType", "Count")
 
 # View the result
 print(cell_type_age_counts)
@@ -400,73 +401,26 @@ cell_type_age_counts$CellType <- factor(cell_type_age_counts$CellType,
                                         levels = sort(unique(cell_type_age_counts$CellType)))
 
 # Create stacked bar plot
-ggplot(cell_type_age_counts, aes(x = CellType, y = Percentage, fill = Age)) +
+p <- ggplot(cell_type_age_counts, aes(x = reorder(CellType, -Percentage), y = Percentage, fill = CellType)) +
   geom_bar(stat = "identity", position = "stack") +
-  geom_text(aes(label = ifelse(Percentage > 5, sprintf("%.1f%%", Percentage), "")), 
+  geom_text(aes(label = ifelse(Percentage > 0, sprintf("%.1f%%", Percentage), "")), 
             position = position_stack(vjust = 0.5), 
-            size = 3, color = "black") +
+            size = 3.2, color = "black") +
   theme_minimal() +
-  labs(title = "Cell Type Composition by Age", 
+  labs(title = "Cell Type Composition", 
        x = "Cell Type", y = "Percentage (%)") +
   theme(
     axis.text.x = element_text(size = 15, angle = 45, hjust = 1),
     plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
     axis.title = element_text(size = 18, face = "bold"),
     axis.text = element_text(size = 18),
-    legend.title = element_text(size = 18, face = "bold"),
-    legend.text = element_text(size = 18)) + 
-  scale_fill_manual(values = c("2week" = "#F8766D", 
-                               "3week" = "#00BA38", 
-                               "1year" = "#619CFF")) +
-  ggtitle("Cell Type Composition by Age")
-ylim(0, 100)
-
-#############separate fibroblast cell types
-# First, create the count table with both cell type and age
-cell_type_age_counts <- as.data.frame(table(merged_seurat$cell_type, merged_seurat$Age))
-colnames(cell_type_age_counts) <- c("CellType", "Age", "Count")
-
-# Filter to only include Fibroblastic Stroma 1, 2, and 3
-cell_types <- c("Fibroblastic Stroma 1", "Fibroblastic Stroma 2", "Theca Cells 1", "Theca Cells 2")
-cell_type_age_counts <- cell_type_age_counts[cell_type_age_counts$CellType %in% cell_types, ]
-
-# Compute percentage within each cell type (so each cell type bar sums to 100%)
-library(dplyr)
-cell_type_age_counts <- cell_type_age_counts %>%
-  group_by(CellType) %>%
-  mutate(Percentage = (Count / sum(Count)) * 100) %>%
-  ungroup()
-
-# Order cell types alphabetically (or numerically: 1, 2, 3)
-cell_type_age_counts$CellType <- factor(cell_type_age_counts$CellType, 
-                                        levels = sort(cell_types))
-
-# Create stacked bar plot
-p <- ggplot(cell_type_age_counts, aes(x = CellType, y = Percentage, fill = Age)) +
-  geom_bar(stat = "identity", position = "stack") +
-  geom_text(aes(label = ifelse(Percentage > 5, sprintf("%.1f%%", Percentage), "")), 
-            position = position_stack(vjust = 0.5), 
-            size = 4.5, color = "black") +
-  theme_minimal() +
-  labs(title = "Stroma & Theca Cell\nComposition by Age", 
-       x = "Cell Type", y = "Percentage (%)") +
-  theme(
-    text = element_text(size = 16),              # Overall base font size
-    axis.text.x = element_text(angle = 45, hjust = 0.98, size = 16.4, vjust = 1.1),  # X-axis labels
-    axis.text.y = element_text(size = 18),       # Y-axis labels
-    axis.title.x = element_blank(),
-    axis.title.y = element_text(size = 18, face = "bold"),# Axis titles
-    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),        # Plot title
-    legend.text = element_text(size = 18),       # Legend labels
-    legend.title = element_text(size = 18, face = "bold"),
-    legend.box.margin = margin(0, 0, 0, -10), 
-    plot.margin = margin(t = 10, r = 20, b = 10, l = 20, unit = "pt")) +
-  scale_fill_manual(values = c("2week" = "#F8766D", 
-                               "3week" = "#00BA38", 
-                               "1year" = "#619CFF")) +
-  ylim(0, 100)
+    legend.position = "none",
+    plot.margin = margin(t = 10, r = 20, b = 10, l = 45)  # top, right, bottom, left
+  ) + 
+  ggtitle("Cell Type Composition")
 print(p)
-ggsave("cell-types-age.png", plot = p, width = 7, height = 7, dpi = 800)
+
+ggsave("cell-type-comp.png", plot = p, width = 8, height = 7, dpi = 800)
 
 #find optimal clusters for the dataset
 #if (!require("BiocManager", quietly = TRUE))
@@ -493,7 +447,7 @@ cluster_markers_75high <- FindAllMarkers(merged_seurat, test.use = "MAST",
                                          only.pos = TRUE, min.pct = 0.75, logfc.threshold = 2.0)
 
 View(cluster_markers_75high)
-write.csv(cluster_markers_75high, "2w3w1y_cluster_markers_75high.csv", row.names = FALSE)
+write.csv(cluster_markers_75high, "2w_cluster_markers_75high.csv", row.names = FALSE)
 
 
 #I wonder if you can annotate this heatmap, so that you only include your markers of interest.
@@ -537,25 +491,28 @@ p <- DoHeatmap(merged_seurat,
     legend.text = element_text(size = 18),       # Legend labels
     legend.title = element_text(size = 18, face = "bold"),
     legend.box.margin = margin(0, 0, 0, -10), 
-    plot.margin = margin(t = 10, r = 20, b = 10, l = 20, unit = "pt")) +
-  guides(fill = guide_colorbar())
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 5, unit = "pt"), 
+    legend.position = "right", 
+    legend.justification = "top") +
+  guides(fill = guide_colorbar()) +
+  guides(color = "none")
 print(p)
 
 # Save the plot
-ggsave("heatmap-makers.png", p, width = 12, height = 8, dpi = 1200)
+ggsave("heatmap-makers-2w.png", p, width = 10, height = 8, dpi = 1200)
 
 #---------------------------------subset for stromal cells of interest------------
 #subset the seurat object
-Idents(merged_seurat) <- "RNA_snn_res.0.1"
-subset_seurat <- subset(merged_seurat, idents = c("0","2","4","6"))
+Idents(merged_seurat) <- "RNA_snn_res.0.2"
+subset_seurat <- subset(merged_seurat, idents = c("0","1","2","4","7","9"))
 
-my_colors <- c("Fibroblastic Stroma 1" = "#00BA38", 
-               "Fibroblastic Stroma 2" = "#00C08B", 
-               "Theca Cells 1" = "#F564E3", 
-               "Theca Cells 2" = "#FF60AE")
+my_colors <- c("Fibroblastic Stroma 1" = "#53B400", 
+               "Fibroblastic Stroma 2" = "#00BC56",
+               "Fibroblastic Stroma 3" = "#00C094",
+               "Theca Cells 1" = "#FF66A8", 
+               "Fibroblastic Stroma 4" = "#00BFC4",
+               "Fibroblastic Stroma 5" = "#00B6EB")
 DimPlot(subset_seurat, group.by = "cell_type", cols = my_colors)
-
-DimPlot(subset_seurat, group.by = "Age")
 
 # Re-run the analysis pipeline on the subset
 subset_seurat <- NormalizeData(subset_seurat, 
@@ -569,7 +526,6 @@ ElbowPlot(subset_seurat)
 subset_seurat <- FindNeighbors(subset_seurat, dims = 1:16) #16 based in elbow plot
 subset_seurat <- FindClusters(subset_seurat, resolution = c(0.1, 0.3, 0.5, 0.6, 0.8, 0.7, 1))
 DimPlot(subset_seurat, group.by = "RNA_snn_res.0.6", label = TRUE)
-DimPlot(subset_seurat, group.by = "Age", label = TRUE)
 #setting identity of clusters
 Idents(subset_seurat) <- "RNA_snn_res.0.6"
 
@@ -624,10 +580,10 @@ ggsave("subset-umap-small-xleg.png", plot = p2, width = 7, height = 7, dpi = 800
 create_loupe_from_seurat(
   subset_seurat,
   output_dir = "/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs",
-  output_name = "2w3w1yWT-stroma-subset")
+  output_name = "2w-stroma-subset")
 
 #make a seurat subset object to load into different aspects of the pipeline
-save(subset_seurat, file = "2w3w1yWT-stroma-subset_seurat.RData")
+save(subset_seurat, file = "2w-stroma-subset_seurat.RData")
 
 ##########################GO/GSEA/KEGG##################################
 
