@@ -332,4 +332,54 @@ ggsave(filename = "pseudotime_plot_monocle3.png",   # file name
        width = 8, height = 8,             # width and height in inches
        dpi = 800)                          # resolution
 
-####git test
+###################genes in pseudotime######################################
+library(monocle3)
+library(ggplot2)
+library(reshape2)
+
+#extracting pseduotime from the root note from above...can change to investigate
+
+# Genes of interest
+#genes_of_interest <- c("Enpep", "Anpep", "Tcf21", "Wt1", "Gli1")
+genes_of_interest <- c("Sod2", "Ppargc1a", "Sod1", "Sod3", "Ppargc1b")
+# Extract pseudotime values (named vector, names = cells)
+pt <- pseudotime(subset_cds)
+
+# Extract expression matrix (genes x cells)
+expr_mat <- log1p(exprs(subset_cds[genes_of_interest, ]))
+
+# Transpose to cells x genes
+expr_data <- as.data.frame(t(expr_mat))
+
+# Add pseudotime and metadata directly (rownames are cell IDs)
+expr_data$pseudotime <- pt[rownames(expr_data)]
+
+meta <- as.data.frame(colData(subset_cds))
+expr_data$Age <- meta[rownames(expr_data), "Age"]
+
+# Reshape to long format
+expr_long <- melt(expr_data,
+                  id.vars = c("pseudotime", "Age"),
+                  variable.name = "gene",
+                  value.name = "expression")
+
+# Plot by Age
+p1 <- ggplot(expr_long, aes(x = pseudotime, y = expression, color = gene)) +
+  geom_point(size = 1.0, alpha = 0.25) +
+  geom_smooth(se = FALSE, method = "loess", size = 1.2) +
+  facet_wrap(~ Age) +
+  theme_classic() +
+  theme(
+    strip.text = element_text(size = 18, face = "bold"),
+    axis.text.y  = element_text(size = 18),
+    axis.text.x  = element_text(size = 18),
+    axis.title.x = element_text(size = 18, face = "bold"),
+    axis.title.y = element_text(size = 18, face = "bold"),
+    plot.title   = element_text(hjust = 0.5, face = "bold", size = 18),
+    legend.text  = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold")) +
+  labs(title = "Gene expression across pseudotime by Age")
+
+print(p1)
+
+ggsave("genes-in-time-by-age.png", plot = p1, width = 9, height = 6, dpi = 800)
