@@ -11,8 +11,8 @@ library(dplyr)
 #install.packages("remotes")
 library(hdf5r)
 library(remotes)
-remotes::install_github("10xGenomics/loupeR")
-loupeR::setup()
+#remotes::install_github("10xGenomics/loupeR")
+#loupeR::setup()
 library(loupeR)
 library(patchwork)
 
@@ -57,7 +57,7 @@ sce$cluster <- clusters
 sce <- slingshot(sce, 
                  clusterLabels = 'cluster',
                  reducedDim = 'UMAP',
-                 start.clus = '2')  # Replace 'X' with your starting cluster
+                 start.clus = '8')  # Replace 'X' with your starting cluster
 
 # Create plotting data
 plot_data <- data.frame(
@@ -107,7 +107,7 @@ set.seed(123)
 sds <- slingshot(sce, 
                  reducedDim = 'UMAP',
                  clusterLabels = colData(sce)$GMM,
-                 start.clus = '2',
+                 start.clus = '8',
                  stretch = 0.8,
                  smoother = 'smooth.spline',
                  shrink = 1.0)
@@ -297,7 +297,7 @@ plot_cells(subset_cds,
 
 
 #this makes it the correct structure for the order_cells - guessing the root cells as a cluster
-root_cells <- colnames(subset_cds)[clusters(subset_cds) == 2]
+root_cells <- colnames(subset_cds)[clusters(subset_cds) == 8]
 
 subset_cds <- order_cells(subset_cds, reduction_method = "UMAP", 
                           root_cells = root_cells)
@@ -314,8 +314,8 @@ p <- plot_cells(subset_cds,
                 label_branch_points = FALSE, 
                 label_roots = FALSE, 
                 label_leaves = FALSE, 
-                cell_size = 1.0, 
-                graph_label_size = 10)
+                cell_size = 0.7, 
+                graph_label_size = 6) 
 
 # Optionally adjust font sizes with theme()
 p <- p + theme(
@@ -325,6 +325,7 @@ p <- p + theme(
   legend.title = element_text(size = 20),
   legend.text = element_text(size = 20)
 )
+print(p)
 
 # Save the plot to a file
 ggsave(filename = "pseudotime_plot_monocle3.png",   # file name
