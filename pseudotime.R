@@ -19,7 +19,8 @@ library(patchwork)
 
 #import R object
 #load("2w3w1y-WT-merged_seurat.Robj")
-load("2w3w1yWT-stroma-subset_seurat.RData")
+#load("2w3w1yWT-stroma-subset_seurat.RData")
+load("2w-stroma-subset_seurat.RData")
 View(subset_seurat)
 head(subset_seurat)
 tail(subset_seurat)
@@ -57,7 +58,7 @@ sce$cluster <- clusters
 sce <- slingshot(sce, 
                  clusterLabels = 'cluster',
                  reducedDim = 'UMAP',
-                 start.clus = '8')  # Replace 'X' with your starting cluster
+                 start.clus = '3')  # Replace 'X' with your starting cluster
 
 # Create plotting data
 plot_data <- data.frame(
@@ -107,7 +108,7 @@ set.seed(123)
 sds <- slingshot(sce, 
                  reducedDim = 'UMAP',
                  clusterLabels = colData(sce)$GMM,
-                 start.clus = '8',
+                 start.clus = '3',
                  stretch = 0.8,
                  smoother = 'smooth.spline',
                  shrink = 1.0)
@@ -176,6 +177,23 @@ for(i in 1:n_lineages) {
   
   dev.off()
 }
+################TEST STARTS
+# Define your cluster colors manually (order should match levels(clusters))
+cluster_colors <- c(
+  "0" = "#F8766D",  
+  "1" = "#D98900",  
+  "2" = "#A99C00",  
+  "3" = "#64B200",  
+  "4" = "#00BD5B",
+  "5" = "#00BFA4", 
+  "6" = "#00BADE", 
+  "7" = "#00A0FF", 
+  "8" = "#B385FF",
+  "9" = "#EE61EA",
+  "10" = "#FF63B6")
+
+# Make sure clusters are factors with correct levels
+clusters <- factor(colData(sce)$GMM)
 
 # Summary plot — square, matching styling
 png(filename = "All_Trajectories.png", width = 1200, height = 1200, res = 150, family = "Arial")
@@ -183,34 +201,36 @@ png(filename = "All_Trajectories.png", width = 1200, height = 1200, res = 150, f
 par(mar = c(6,6,5,10))
 par(xpd = NA)
 
+# Plot using your colors
 plot(reducedDims(sce)$UMAP,
-     col = rainbow(length(unique(clusters)))[as.numeric(colData(sce)$GMM)],
+     col = cluster_colors[as.character(clusters)],  # <- explicit mapping
      pch = 16,
      cex = 0.8,
      xlab = "UMAP 1",
      ylab = "UMAP 2",
      main = "All Trajectories",
-     cex.lab = 2,        # 20 pt equivalent
+     cex.lab = 2,
      cex.axis = 1.9,
      cex.main = 2,
      family = "Arial")
 
-# Add all trajectories
+# Add trajectories
 lines(SlingshotDataSet(sds), lwd = 2, col = "black", type = "curves")
 
-# Add cluster legend
+# Add legend with same colors
 legend(
   x = par("usr")[2] + 0.1 * diff(par("usr")[1:2]),
   y = par("usr")[4] - 0.05 * diff(par("usr")[3:4]),
   legend = levels(clusters),
-  col = rainbow(length(unique(clusters))),
+  col = cluster_colors[levels(clusters)],  # <- same mapping
   pch = 16,
-  cex = 2,               # 20 pt equivalent
+  cex = 2,
   title = "Clusters",
   title.adj = 0
 )
 
 dev.off()
+
 
 ##this code now exports each as an individual file, so I can make the figures better
 
@@ -297,7 +317,7 @@ plot_cells(subset_cds,
 
 
 #this makes it the correct structure for the order_cells - guessing the root cells as a cluster
-root_cells <- colnames(subset_cds)[clusters(subset_cds) == 8]
+root_cells <- colnames(subset_cds)[clusters(subset_cds) == 3]
 
 subset_cds <- order_cells(subset_cds, reduction_method = "UMAP", 
                           root_cells = root_cells)
