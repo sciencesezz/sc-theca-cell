@@ -22,7 +22,7 @@ library(RColorBrewer)
 
 #import R object
 #load("2w3w1y-WT-merged_seurat.Robj")
-load("2w3w1yWT-stroma-subset_seurat.RData")
+load("2w-stroma-subset_seurat.RData")
 View(subset_seurat)
 head(subset_seurat)
 tail(subset_seurat)
@@ -74,24 +74,17 @@ subset_seurat$CytoTRACE_score <- cytotrace_scores[Cells(subset_seurat)]
 
 subset_seurat$CytoTRACE_potency <- cytotrace_results$CytoTRACE2_Potency
 
-FeaturePlot(subset_seurat, features = "CytoTRACE_score", 
+scoreplot <- FeaturePlot(subset_seurat, features = "CytoTRACE_score", 
             cols = c("lightgrey", "blue"), pt.size = 0.1) +
   labs(title = "CytoTRACE2 Score on UMAP")
-
-age_potency <- DimPlot(subset_seurat, group.by = "Age", 
-                       label = FALSE, repel = TRUE) +
-  ggtitle("Age") 
-print(age_potency)
+print(scoreplot)
+ggsave("scoreplot-by-clus-age.png", plot = scoreplot, width = 7, height = 7, dpi = 800)
 
 potency <- DimPlot(subset_seurat, group.by = "CytoTRACE_potency", 
                    label = FALSE, repel = TRUE) +
   ggtitle("Potency") 
 print(potency)
-
-potency_combo <- potency / age_potency
-print(potency_combo)
 ggsave("potency.png", plot = potency, width = 7, height = 7, dpi = 800)
-ggsave("potency-combo.png", plot = potency_combo, width = 5, height = 7, dpi = 800)
 
 score <- ggplot(subset_seurat@meta.data, aes(x = RNA_snn_res.0.6, y = CytoTRACE_score, fill = RNA_snn_res.0.6)) +
   geom_violin(trim = TRUE, width = 1.8) +
@@ -107,4 +100,4 @@ score <- ggplot(subset_seurat@meta.data, aes(x = RNA_snn_res.0.6, y = CytoTRACE_
         legend.position = "none")
 print(score)
 
-ggsave("score-by-clus-age.png", plot = score, width = 13, height = 6, dpi = 800)
+ggsave("score-by-clus-age.png", plot = score, width = 8, height = 6, dpi = 800)
