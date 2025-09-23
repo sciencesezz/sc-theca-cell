@@ -15,6 +15,7 @@ library(remotes)
 #loupeR::setup()
 library(loupeR)
 library(patchwork)
+library(DoubletFinder)
 
 setwd("/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs")
 
@@ -260,12 +261,99 @@ merged_seurat <- RunUMAP(merged_seurat, dims = 1:16)
 create_loupe_from_seurat(
   merged_seurat,
   output_dir = "/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs",
-  output_name = "2w-final-mito10-sept", 
+  output_name = "2w-final-mito10-sept-doublets", 
   metadata_cols = c("RNA_snn_res.0.1", "RNA_snn_res.0.2", 
                     "RNA_snn_res.0.3", "Age", "sample"))
 
-DimPlot(merged_seurat, reduction = "umap", group.by = "Age")
+DimPlot(merged_seurat, reduction = "umap", group.by = "sample")
 DimPlot(merged_seurat, reduction = "umap", group.by = "RNA_snn_res.0.2")
+
+#pN - number of generated artificial doublets - default is 25%, performance is largely pN-invariant
+### pK value opt ---------------------------------------------------------------
+#pK value optimisation (no ground truth) - from github page
+sweep_res  <- paramSweep(merged_seurat, PCs = 1:16, sct = FALSE) #this number of dimensions has to match above
+sweep_stats <- summarizeSweep(sweep_res, GT = FALSE)
+find_pk <- find.pK(sweep_stats)
+
+ggplot(find_pk, aes(pK, BCmetric, group = 1)) +
+  geom_point() + 
+  geom_line()
+
+#pK value that corresponds to the maxmium BCMetric is the optimal pK value (based on graph)
+#in our case it is 0.005
+#stored to pK value
+
+pK <- find_pk %>%
+  filter(BCmetric == max(BCmetric)) %>%
+  select(pK)
+pK <- as.numeric(as.character(pK[[1]]))
+
+#homotypic double proportion estimate -----------------------------------------
+annotations <- merged_seurat@meta.data$RNA_snn_res.0.2 #annotations are cell clusters
+homotypic_prop <- modelHomotypic(annotations)
+nExp_poi <- round(0.08*nrow(merged_seurat@meta.data)) #set the % doublets from 10x sheet, exp dependent
+nExp_poi.adj <- round(nExp_poi*(1-homotypic_prop))
+
+
+#nExp - defines the pANN threshold used to make final doublet/singlet predictions
+#This value can best be estimated from cell loading densities into the 10X/Drop-Seq device,
+#and adjusted according to the estimated proportion of homotypic doublets.
+#our 2024 experiment targeted 10000 cells see benchling for number of cells/sample post filtering
+
+##run DoubletFinder---------------------------------------------------------
+merged_seurat <- doubletFinder(merged_seurat,
+                               PCs = 1:16,
+                               pN = 0.25, 
+                               pK = pK, 
+                               nExp = nExp_poi.adj,
+                               reuse.pANN = NULL, 
+                               sct = FALSE)
+
+#visualise doublets
+
+
+p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "DF.classifications_0.25_0.005_2031") + 
+  ggtitle("DoubletFinder") + 
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 18))
+print(p1)
+ggsave("doublet-umap.png", plot = p1, width = 7, height = 7, dpi = 800)
+
+
+#number of singlets and doublets
+table(merged_seurat@meta.data$DF.classifications_0.25_0.005_2031)
+
+#doublets needs to be filtered out
+merged_seurat <- subset(
+  merged_seurat, 
+  subset = DF.classifications_0.25_0.005_2031 == "Singlet"
+)
+
+create_loupe_from_seurat(
+  merged_seurat,
+  output_dir = "/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs",
+  output_name = "2w-final-mito10-sept-singles", 
+  metadata_cols = c("RNA_snn_res.0.1", "RNA_snn_res.0.2", 
+                    "RNA_snn_res.0.3", "Age", "sample"))
+
+p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "DF.classifications_0.25_0.005_2031") + 
+  ggtitle("DoubletFinder Filtered") + 
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 18))
+print(p1)
+ggsave("singlet-umap.png", plot = p1, width = 7, height = 7, dpi = 800)
+
+
+#continue with workflow!
+
 #DimPlot(filtered_seurat, reduction = "tsne")
 
 #plot with labels - apparently you can tell if you have batch effects from this
@@ -316,7 +404,7 @@ merged_seurat$cell_type[merged_seurat$cluster_id == 0] <- "Fibroblastic Stroma 1
 merged_seurat$cell_type[merged_seurat$cluster_id == 1] <- "Fibroblastic Stroma 2"
 merged_seurat$cell_type[merged_seurat$cluster_id == 2] <- "Fibroblastic Stroma 3"
 merged_seurat$cell_type[merged_seurat$cluster_id == 3] <- "GCs"
-merged_seurat$cell_type[merged_seurat$cluster_id == 4] <- "Theca Cells 1"
+merged_seurat$cell_type[merged_seurat$cluster_id == 4] <- "Theca Cells"
 merged_seurat$cell_type[merged_seurat$cluster_id == 5] <- "Epithelial"
 merged_seurat$cell_type[merged_seurat$cluster_id == 6] <- "Endothelial 1"
 merged_seurat$cell_type[merged_seurat$cluster_id == 7] <- "Fibroblastic Stroma 4"
@@ -388,7 +476,7 @@ print(cell_type_age_counts)
 # Compute percentage within each cell type (so each cell type bar sums to 100%)
 #library(dplyr)
 cell_type_age_counts <- cell_type_age_counts %>%
-  dplyr::group_by(CellType) %>%
+  #dplyr::group_by(CellType) %>%
   mutate(Percentage = (Count / sum(Count)) * 100) %>%
   ungroup()
 
@@ -499,7 +587,7 @@ p <- DoHeatmap(merged_seurat,
 print(p)
 
 # Save the plot
-ggsave("heatmap-makers-2w.png", p, width = 10, height = 8, dpi = 1200)
+ggsave("heatmap-markers-2w.png", p, width = 10, height = 8, dpi = 1200)
 
 #---------------------------------subset for stromal cells of interest------------
 #subset the seurat object
@@ -509,7 +597,7 @@ subset_seurat <- subset(merged_seurat, idents = c("0","1","2","4","7","9"))
 my_colors <- c("Fibroblastic Stroma 1" = "#53B400", 
                "Fibroblastic Stroma 2" = "#00BC56",
                "Fibroblastic Stroma 3" = "#00C094",
-               "Theca Cells 1" = "#FF66A8", 
+               "Theca Cells" = "#FF66A8", 
                "Fibroblastic Stroma 4" = "#00BFC4",
                "Fibroblastic Stroma 5" = "#00B6EB")
 DimPlot(subset_seurat, group.by = "cell_type", cols = my_colors)
@@ -580,7 +668,7 @@ ggsave("subset-umap-small-xleg.png", plot = p2, width = 7, height = 7, dpi = 800
 create_loupe_from_seurat(
   subset_seurat,
   output_dir = "/mnt/data/home/sarahsczelecki/single-cell/seurat/outputs",
-  output_name = "2w-stroma-subset")
+  output_name = "2w-stroma-subset-singlets")
 
 #make a seurat subset object to load into different aspects of the pipeline
 save(subset_seurat, file = "2w-stroma-subset_seurat.RData")
