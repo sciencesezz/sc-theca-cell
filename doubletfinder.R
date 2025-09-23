@@ -17,7 +17,7 @@ library(RColorBrewer)
 library(DoubletFinder)
 
 
-#import R object
+#import R object - filtered, I think I can also add this to the seurat pipeline.
 #load("2w3w1y-WT-merged_seurat.Robj")
 load("2w-final-mito10.RData") #actually I think this is wrong I need to do it to the individual seurat objects
 #then I need to merge those together
@@ -29,7 +29,7 @@ load("2w-final-mito10.RData") #actually I think this is wrong I need to do it to
 #need seurat object
 #above
 
-#standard workflow
+#standard workflow - basic, might not match my previous data
 #merged_seurat <- NormalizeData(object = merged_seurat)
 #merged_seurat <- FindVariableFeatures(object = merged_seurat)
 #merged_seurat <- ScaleData(object = merged_seurat)
@@ -37,7 +37,7 @@ load("2w-final-mito10.RData") #actually I think this is wrong I need to do it to
 #ElbowPlot(merged_seurat) #select 16 dimensions
 
 
-#workflow I have used
+#workflow I have used to match other scripts
 ##Step 3 - normalisation
 merged_seurat <- NormalizeData(merged_seurat, 
                                normalization.method = "LogNormalize", 
@@ -69,8 +69,11 @@ Idents(merged_seurat) <- "RNA_snn_res.0.2"
 merged_seurat <- RunUMAP(merged_seurat, dims = 1:16)
 DimPlot(merged_seurat, group.by = "RNA_snn_res.0.2", label = TRUE)
 
+#pN - number of generated artificial doublets - default is 25%, performance is largely pN-invariant
+
+### pK value opt ---------------------------------------------------------------
 #pK value optimisation (no ground truth) - from github page
-sweep_res  <- paramSweep(merged_seurat, PCs = 1:16, sct = FALSE)
+sweep_res  <- paramSweep(merged_seurat, PCs = 1:16, sct = FALSE) #this number of dimensions has to match above
 sweep_stats <- summarizeSweep(sweep_res, GT = FALSE)
 find_pk <- find.pK(sweep_stats)
 
@@ -87,9 +90,49 @@ pK <- find_pk %>%
   select(pK)
 pK <- as.numeric(as.character(pK[[1]]))
 
-#pN
+#homotypic double proportion estimate -----------------------------------------
+annotations <- merged_seurat@meta.data$RNA_snn_res.0.2 #annotations are cell clusters
+homotypic_prop <- modelHomotypic(annotations)
+nExp_poi <- round(0.08*nrow(merged_seurat@meta.data)) #set the % doublets from 10x sheet, exp dependent
+nExp_poi.adj <- round(nExp_poi*(1-homotypic_prop))
 
 
+#nExp - defines the pANN threshold used to make final doublet/singlet predictions
+#This value can best be estimated from cell loading densities into the 10X/Drop-Seq device,
+#and adjusted according to the estimated proportion of homotypic doublets.
+#our 2024 experiment targeted 10000 cells see benchling for number of cells/sample post filtering
+  
+##run DoubletFinder---------------------------------------------------------
+merged_seurat <- doubletFinder(merged_seurat,
+                               PCs = 1:16,
+                               pN = 0.25, 
+                               pK = pK, 
+                               nExp = nExp_poi.adj,
+                               reuse.pANN = NULL, 
+                               sct = FALSE)
+
+#visualise doublets
 
 
+p1 <- DimPlot(merged_seurat, reduction = "umap", group.by = "DF.classifications_0.25_0.005_2031") + 
+  ggtitle("DoubletFinder") + 
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    axis.title = element_text(size = 18, face = "bold"),
+    axis.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 18))
+print(p1)
+ggsave("doublet-umap.png", plot = p1, width = 7, height = 7, dpi = 800)
 
+
+#number of singlets and doublets
+table(merged_seurat@meta.data$DF.classifications_0.25_0.005_2031)
+
+#doublets needs to be filtered out
+merged_seurat <- subset(
+  merged_seurat, 
+  subset = DF.classifications_0.25_0.005_2031 == "Singlet"
+)
+
+#continue with workflow!
