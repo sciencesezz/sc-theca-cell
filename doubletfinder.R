@@ -19,7 +19,8 @@ library(DoubletFinder)
 
 #import R object
 #load("2w3w1y-WT-merged_seurat.Robj")
-load("2w-final-mito10.RData")
+load("2w-final-mito10.RData") #actually I think this is wrong I need to do it to the individual seurat objects
+#then I need to merge those together
 
 #split seurat object by sample ID, then run doublet finder on each of those datasets
 #let's run 2 week as an example first
