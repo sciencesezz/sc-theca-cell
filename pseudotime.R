@@ -20,7 +20,7 @@ library(patchwork)
 #import R object
 #load("2w3w1y-WT-merged_seurat.Robj")
 #load("2w3w1yWT-stroma-subset_seurat.RData")
-load("2w-stroma-subset_seurat.RData")
+load("2w-stroma-subset_seurat.RData") #this should be the singlet one, I wrote over the old one
 View(subset_seurat)
 head(subset_seurat)
 tail(subset_seurat)
@@ -58,7 +58,7 @@ sce$cluster <- clusters
 sce <- slingshot(sce, 
                  clusterLabels = 'cluster',
                  reducedDim = 'UMAP',
-                 start.clus = '3')  # Replace 'X' with your starting cluster
+                 start.clus = '6')  # Replace 'X' with your starting cluster
 
 # Create plotting data
 plot_data <- data.frame(
@@ -108,7 +108,7 @@ set.seed(123)
 sds <- slingshot(sce, 
                  reducedDim = 'UMAP',
                  clusterLabels = colData(sce)$GMM,
-                 start.clus = '3',
+                 start.clus = '6',
                  stretch = 0.8,
                  smoother = 'smooth.spline',
                  shrink = 1.0)
@@ -189,8 +189,7 @@ cluster_colors <- c(
   "6" = "#00BADE", 
   "7" = "#00A0FF", 
   "8" = "#B385FF",
-  "9" = "#EE61EA",
-  "10" = "#FF63B6")
+  "9" = "#EE61EA")
 
 # Make sure clusters are factors with correct levels
 clusters <- factor(colData(sce)$GMM)
@@ -317,7 +316,7 @@ plot_cells(subset_cds,
 
 
 #this makes it the correct structure for the order_cells - guessing the root cells as a cluster
-root_cells <- colnames(subset_cds)[clusters(subset_cds) == 3]
+root_cells <- colnames(subset_cds)[clusters(subset_cds) == 6]
 
 subset_cds <- order_cells(subset_cds, reduction_method = "UMAP", 
                           root_cells = root_cells)
