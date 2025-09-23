@@ -70,6 +70,25 @@ DimPlot(merged_seurat, group.by = "RNA_snn_res.0.2", label = TRUE)
 
 #pK value optimisation (no ground truth) - from github page
 sweep_res  <- paramSweep(merged_seurat, PCs = 1:16, sct = FALSE)
-sweep_stats <- summarizeSweep(merged_seurat)
+sweep_stats <- summarizeSweep(sweep_res, GT = FALSE)
+find_pk <- find.pK(sweep_stats)
+
+ggplot(find_pk, aes(pK, BCmetric, group = 1)) +
+  geom_point() + 
+  geom_line()
+
+#pK value that corresponds to the maxmium BCMetric is the optimal pK value (based on graph)
+#in our case it is 0.005
+#stored to pK value
+
+pK <- find_pk %>%
+  filter(BCmetric == max(BCmetric)) %>%
+  select(pK)
+pK <- as.numeric(as.character(pK[[1]]))
+
+#pN
+
+
+
 
 
