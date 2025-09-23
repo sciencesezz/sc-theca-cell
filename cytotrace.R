@@ -22,7 +22,7 @@ library(RColorBrewer)
 
 #import R object
 #load("2w3w1y-WT-merged_seurat.Robj")
-load("2w-stroma-subset_seurat.RData")
+load("2w-stroma-subset_seurat.RData") #this should be the singlet one, I wrote over the old one
 View(subset_seurat)
 head(subset_seurat)
 tail(subset_seurat)
