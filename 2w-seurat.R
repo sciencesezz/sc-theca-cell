@@ -673,6 +673,51 @@ create_loupe_from_seurat(
 #make a seurat subset object to load into different aspects of the pipeline
 save(subset_seurat, file = "2w-stroma-subset_seurat.RData")
 
+#markers of subset seurat
+cluster_markers_subset <- FindAllMarkers(subset_seurat, test.use = "MAST", 
+                                         only.pos = TRUE, min.pct = 0.75, logfc.threshold = 1.0)
+
+View(cluster_markers_subset)
+write.csv(cluster_markers_subset, "2w_cluster_markers_subset.csv", row.names = FALSE)
+
+
+#I wonder if you can annotate this heatmap, so that you only include your markers of interest.
+
+cluster_markers_subset %>%
+  group_by(cluster) %>%
+  dplyr::filter(avg_log2FC > 1) %>%
+  slice_head(n = 5) %>%
+  ungroup() -> top5
+
+# Create plot object with cell type labels
+p <- DoHeatmap(subset_seurat, 
+               features = top5$gene, 
+               size = 5, 
+               angle = 45,
+               group.by = "RNA_snn_res.0.6",
+               group.bar = TRUE,
+               group.bar.height = 0.05, 
+               label = FALSE) +
+  theme(
+    text = element_text(size = 16),              # Overall base font size
+    axis.text.x = element_blank(),  # X-axis labels
+    axis.text.y = element_text(size = 18),       # Y-axis labels
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),# Axis titles
+    plot.title = element_blank(),        # Plot title
+    legend.text = element_text(size = 18),       # Legend labels
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.box.margin = margin(0, 0, 0, -10), 
+    plot.margin = margin(t = 5, r = 5, b = 5, l = 5, unit = "pt"), 
+    legend.position = "right", 
+    legend.justification = "top") +
+  guides(fill = guide_colorbar()) +
+  guides(color = "none")
+print(p)
+
+# Save the plot
+ggsave("heatmap-markers-2w-subset.png", p, width = 10, height = 11, dpi = 1200)
+
 ##########################GO/GSEA/KEGG##################################
 
 
