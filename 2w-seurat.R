@@ -675,19 +675,19 @@ save(subset_seurat, file = "2w-stroma-subset_seurat.RData")
 
 #markers of subset seurat
 cluster_markers_subset <- FindAllMarkers(subset_seurat, test.use = "MAST", 
-                                         only.pos = TRUE, min.pct = 0.75, logfc.threshold = 1.0)
+                                         only.pos = FALSE, min.pct = 0.75, logfc.threshold = 1.0)
 
 View(cluster_markers_subset)
 write.csv(cluster_markers_subset, "2w_cluster_markers_subset.csv", row.names = FALSE)
 
 
 #I wonder if you can annotate this heatmap, so that you only include your markers of interest.
-
-cluster_markers_subset %>%
-  group_by(cluster) %>%
-  dplyr::filter(avg_log2FC > 1) %>%
-  slice_head(n = 5) %>%
-  ungroup() -> top5
+#upregulated genes
+  top5 <- cluster_markers_subset %>%
+    group_by(cluster) %>%
+    arrange(desc(avg_log2FC), p_val_adj) %>%  # largest FC first, then lowest p-value
+    slice_head(n = 5) %>%                          # top 5 per cluster
+    ungroup()
 
 # Create plot object with cell type labels
 p <- DoHeatmap(subset_seurat, 
@@ -717,6 +717,9 @@ print(p)
 
 # Save the plot
 ggsave("heatmap-markers-2w-subset.png", p, width = 10, height = 11, dpi = 1200)
+
+##downregulated genes
+
 
 ##########################GO/GSEA/KEGG##################################
 
