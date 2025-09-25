@@ -30,7 +30,6 @@ dataset <- wrap_expression(
 model <- ti_paga()
 
 
-
 guidelines <- guidelines_shiny(dataset)
 methods_selected <- guidelines$methods_selected
 
