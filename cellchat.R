@@ -75,7 +75,7 @@ for (i in 1:nrow(mat)) {
   netVisual_circle(mat2, vertex.weight = groupSize, weight.scale = T, edge.weight.max = max(mat), title.name = rownames(mat)[i])
 }
 
-pathways.show <- c("ACTIVIN") #choose a pathway, to find available ones goes df.net
+pathways.show <- c("WNT") #choose a pathway, to find available ones goes df.net
 # Hierarchy plot
 # Here we define `vertex.receive` so that the left portion of the hierarchy plot shows signaling to fibroblast and the right portion shows signaling to immune cells 
 vertex.receiver = seq(6,3) # a numeric vector. 
@@ -101,5 +101,4 @@ netVisual_chord_gene(cellchat, sources.use = 4, targets.use = c(4,6,7), lab.cex 
 
 cellchat <- netAnalysis_computeCentrality(cellchat, slot.name = "netP") # the slot 'netP' means the inferred intercellular communication network of signaling pathways
 # Visualize the computed centrality scores using heatmap, allowing ready identification of major signaling roles of cell groups
-p <- netAnalysis_signalingRole_network(cellchat, signaling = pathways.show, width = 8, height = 2.5, font.size = 10)
-print(p)
+netAnalysis_signalingRole_network(cellchat, signaling = pathways.show, width = 8, height = 2.5, font.size = 10)
